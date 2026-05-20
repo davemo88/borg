@@ -70,7 +70,7 @@
   }
   button:hover { filter: brightness(1.08); }
   button:active { transform: translateY(1px); }
-  input, textarea {
+  input, textarea, select {
     font: inherit;
     color: var(--text);
     background: #0c0c10;
@@ -79,7 +79,13 @@
     padding: 11px 13px;
     width: 100%;
   }
-  input:focus, textarea:focus { outline: 2px solid var(--accent2); outline-offset: -1px; }
+  input:focus, textarea:focus, select:focus {
+    outline: 2px solid var(--accent2);
+    outline-offset: -1px;
+  }
+  .create-row { display: flex; gap: 8px; }
+  .create-row button { flex: 1 1 auto; }
+  .create-row select { flex: 0 0 auto; width: auto; }
   #join-form { display: flex; gap: 8px; }
   #join-input { text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; }
   #join-form button { flex: 0 0 auto; }
@@ -179,7 +185,13 @@
     <h1>borg</h1>
     <p class="tag">low-latency synchronized karaoke</p>
     <div class="card">
-      <button id="btn-create">Create a borg</button>
+      <div class="create-row">
+        <button id="btn-create">Create a borg</button>
+        <select id="adaptor-select" title="borg input source">
+          <option value="manual">Manual text</option>
+          <option value="llm">LLM · Claude</option>
+        </select>
+      </div>
       <div class="or">— or —</div>
       <form id="join-form">
         <input id="join-input" placeholder="JOIN CODE" autocomplete="off"
@@ -227,6 +239,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---- session state ----
 let joinCode = null, masterCode = null, clientId = null, role = null;
+let borgType = "manual";
 let es = null;
 let clockOffsetUs = 0, bestRttUs = Infinity, synced = false;
 let currentLine = null, wordEls = [];
@@ -246,9 +259,14 @@ if (prefill) $("join-input").value = prefill;
 
 async function createBorg() {
   $("landing-error").textContent = "";
+  borgType = $("adaptor-select").value;
   try {
-    const res = await fetch("/api/borg", { method: "POST" });
-    if (!res.ok) throw new Error("could not create a borg");
+    const res = await fetch("/api/borg?adaptor=" + encodeURIComponent(borgType), {
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error((await res.text()) || "could not create a borg");
+    }
     const j = await res.json();
     joinCode = j.join_code;
     masterCode = j.master_code;
@@ -293,6 +311,10 @@ function enterStage() {
       navigator.clipboard?.writeText(link);
       share.textContent = "copied! " + link;
     });
+    if (borgType === "llm") {
+      $("text-input").placeholder =
+        "say something to the borg — Claude replies, the borg speaks it";
+    }
     $("text-input").focus();
   }
   if (DEBUG) $("debug").hidden = false;
@@ -360,7 +382,10 @@ function connectStream() {
     logDebug("connected");
     updateStatus();
   });
-  es.addEventListener("line", (e) => scheduleLine(JSON.parse(e.data)));
+  es.addEventListener("line", (e) => {
+    scheduleLine(JSON.parse(e.data));
+    updateStatus();
+  });
   es.addEventListener("borg_closed", () => {
     setStatus("the borg has ended");
     es.close();
@@ -446,6 +471,7 @@ async function sendLine() {
   if (!isNaN(secs) && secs > 0) payload.duration_us = Math.round(secs * 1e6);
   ta.value = "";
   ta.focus();
+  if (borgType === "llm") setStatus("the borg is thinking…");
   try {
     const res = await fetch("/api/borg/" + joinCode + "/line", {
       method: "POST",

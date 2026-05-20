@@ -13,7 +13,9 @@ use tokio::sync::mpsc;
 use crate::clock::ServerClock;
 use crate::protocol::LineSpec;
 
+pub mod llm;
 pub mod manual;
+pub use llm::LlmAdaptor;
 pub use manual::ManualTextAdaptor;
 
 /// An event produced by a running adaptor.

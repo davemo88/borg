@@ -12,7 +12,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use tokio::sync::{broadcast, mpsc, oneshot};
 
-use crate::adaptor::{AdaptorControl, AdaptorEvent, AdaptorHandle, InputAdaptor, ManualTextAdaptor};
+use crate::adaptor::{AdaptorControl, AdaptorEvent, AdaptorHandle, InputAdaptor};
 use crate::clock::ServerClock;
 use crate::config::Config;
 use crate::protocol::{BroadcastLine, LineSpec, SendLineResponse};
@@ -65,17 +65,17 @@ pub struct Borg {
 
 impl Borg {
     /// Spawn a borg actor and return the channel used to command it.
+    /// The borg's input source is whatever [`InputAdaptor`] the caller supplies.
     pub fn spawn(
         join_code: String,
         clock: Arc<ServerClock>,
         cfg: Config,
-        wpm: u32,
+        adaptor: Box<dyn InputAdaptor>,
     ) -> mpsc::Sender<BorgCommand> {
         let (cmd_tx, cmd_rx) = mpsc::channel(CHANNEL_CAP);
         let (bcast_tx, _) = broadcast::channel(CHANNEL_CAP);
 
-        let adaptor = Box::new(ManualTextAdaptor::new(wpm));
-        tracing::info!(borg = %join_code, adaptor = adaptor.name(), wpm, "spawning borg");
+        tracing::info!(borg = %join_code, adaptor = adaptor.name(), "spawning borg");
         let AdaptorHandle { events, control } = adaptor.start(clock.clone());
 
         let actor = Borg {
