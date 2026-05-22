@@ -186,17 +186,17 @@
     <p class="tag">low-latency synchronized karaoke</p>
     <div class="card">
       <div class="create-row">
-        <button id="btn-create">Create a borg</button>
+        <button id="btn-create">CREATE BORG</button>
         <select id="adaptor-select" title="borg input source">
-          <option value="manual">Manual text</option>
-          <option value="llm">LLM · Claude</option>
+          <option value="llm">Alien</option>
+          <option value="manual">Human</option>
         </select>
       </div>
       <div class="or">— or —</div>
       <form id="join-form">
-        <input id="join-input" placeholder="JOIN CODE" autocomplete="off"
+        <input id="join-input" placeholder="ENTER CODE" autocomplete="off"
                autocapitalize="characters" spellcheck="false" maxlength="9">
-        <button type="submit">Join</button>
+        <button type="submit">JOIN BORG</button>
       </form>
       <p id="landing-error" class="error"></p>
     </div>
@@ -313,7 +313,7 @@ function enterStage() {
     });
     if (borgType === "llm") {
       $("text-input").placeholder =
-        "say something to the borg — Claude replies, the borg speaks it";
+        "the borg listens";
     }
     $("text-input").focus();
   }
